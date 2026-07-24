@@ -1,0 +1,24 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # rig owns the schema: the lint ships beside the mint-time parser that
+      # enforces it, so the two cannot drift. Fetched at main — the lint is a
+      # dev-time gate; what a MINT parses with is the rig it runs.
+      - name: fetch rig (the lint lives with the mechanism)
+        run: curl -fsSL https://github.com/heavy-duty/rig/archive/refs/heads/main.tar.gz | tar -xz
+      - name: rig template-lint — every definition, every PR
+        run: |
+          shopt -s nullglob
+          dirs=(*-box/ *-server/)
+          if [ ${#dirs[@]} -eq 0 ]; then
+            echo "no role definitions found — an empty registry is a broken registry" >&2
+            exit 1
+          fi
+          bash rig-main/bin/rig template-lint "${dirs[@]}"
