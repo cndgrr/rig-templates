@@ -29,7 +29,7 @@ role because it names the machine itself rather than a server purpose.
     claude-box/
     ├── template.env   KEY="value" data, parsed by rig against an allowlist,
     │                  NEVER sourced: USER, CONTEXT_PATH, CLI_NAME, CLI_SRC,
-    │                  PATH_LINE, NEEDS_NODE, APT_EXTRAS
+    │                  PATH_LINE, NEEDS_NODE, APT_EXTRAS, AGENT, HARDEN_SSHD
     ├── install.sh     the CLI install — the one deliberately executable part,
     │                  run by the mechanism AS ROOT with TENANT_USER /
     │                  TENANT_HOME / TENANT_GROUP / ROLE exported; it drops to
@@ -47,6 +47,12 @@ file. `CLI_SRC` may be `~/`-prefixed; rig expands that to the tenant home by
 string substitution. Omit `CLI_SRC` when the install lands on the system
 PATH already (codex: an npm global's path is the prefix's fact) — rig then
 finds the CLI via `command -v`.
+
+Tenant definitions default to `AGENT="yes"` and `HARDEN_SSHD="no"`, so
+definitions written before those keys are unchanged. `AGENT="no"` keeps
+`USER` required, refuses agent-only keys and `creds.md`, and makes
+`install.sh` optional. `HARDEN_SSHD="yes"` invokes rig's shared sshd
+hardening independently of whether an agent is installed.
 
 Machine-role directories are traits-only: their `template.env` allowlist is
 `ROOT_DOOR`, `HOST`, and `JOIN`. They carry no `creds.md`; an `install.sh` is
