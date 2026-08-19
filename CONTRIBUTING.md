@@ -22,9 +22,22 @@ genuinely rig-templates'.
 3. **Checks must be green**: `rig template-lint` runs on every definition on
    every PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)). rig owns
    the schema — a failing lint is fixed here, never worked around.
-4. **No changelog, no release ceremony** — `main` is the product, pinned
-   from the consumer side (rig#110). A merged PR reaches mints only through
-   a reviewed pin bump in rig, or a mint's explicit `RIG_TEMPLATES_REF`.
+4. **Release changes write fragments** — behavior-changing PRs add one
+   issue-keyed `changelog.d/<issue>.md` fragment with a grouped heading and
+   terminal issue citation. Never edit `CHANGELOG.md` in an ordinary PR.
+
+## Releases
+
+A release is a `release`-labelled PR that changes `VERSION` from `X.Y.Z-dev`
+to bare `X.Y.Z` and assembles every fragment into the stamped changelog
+section. Merging that PR publishes the release; the workflow then re-arms
+`main` at the next development version. A release drill means every definition
+in the registry was converged at least once, unattended, on real metal, at the
+released ref, with the evidence recorded in `drills/X.Y.Z.md` in this repo.
+
+Rig still pins the commit a release tag names rather than trusting a mutable
+tag. A merged PR here reaches mints only through a reviewed pin bump in rig,
+or when a mint explicitly sets `RIG_TEMPLATES_REF`.
 
 ## Labels — who sets what
 
