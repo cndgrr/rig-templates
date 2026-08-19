@@ -7,7 +7,10 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # Third-party actions must resolve to immutable commits; heavy-duty's
+      # first-party ceremony callers keep the repository's single release pin.
+      - uses: heavy-duty/ceremony/actions/sha-pinned@0.7.4
       # rig owns the schema: the lint ships beside the mint-time parser that
       # enforces it, so the two cannot drift. Fetched at main — the lint is a
       # dev-time gate; what a MINT parses with is the rig it runs.
