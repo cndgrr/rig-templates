@@ -17,6 +17,8 @@ jobs:
         run: |
           shopt -s nullglob
           dirs=(*-box/ *-server/)
+          # workstation is the one intentional suffix-less machine role.
+          [[ -d workstation ]] && dirs+=(workstation/)
           if [ ${#dirs[@]} -eq 0 ]; then
             echo "no role definitions found — an empty registry is a broken registry" >&2
             exit 1

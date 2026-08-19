@@ -3,7 +3,7 @@
 # only: sync-labels stays off in labels.yml, so a hand-applied scope survives.
 "scope:roles":
   - changed-files:
-      - any-glob-to-any-file: ["*-box/**"]
+      - any-glob-to-any-file: ["*-box/**", "*-server/**", "workstation/**"]
 "scope:ci":
   - changed-files:
       - any-glob-to-any-file: [".github/**"]
