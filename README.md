@@ -22,9 +22,9 @@ newer templates by default, and a mint overrides per run:
 
 ## Layout — one directory per role, flat, self-namespaced by suffix
 
-The name carries the family (rig#76): `-box` for box tenants, `-server`
-reserved for machine roles that may live here later. The initial registry is
-the agent tenants only.
+The name carries the family (rig#76): `-box` for box tenants and `-server`
+for machine roles. `workstation` is the one intentional suffix-less machine
+role because it names the machine itself rather than a server purpose.
 
     claude-box/
     ├── template.env   KEY="value" data, parsed by rig against an allowlist,
@@ -47,6 +47,10 @@ file. `CLI_SRC` may be `~/`-prefixed; rig expands that to the tenant home by
 string substitution. Omit `CLI_SRC` when the install lands on the system
 PATH already (codex: an npm global's path is the prefix's fact) — rig then
 finds the CLI via `command -v`.
+
+Machine-role directories are traits-only: their `template.env` allowlist is
+`ROOT_DOOR`, `HOST`, and `JOIN`. They carry no `creds.md`; an `install.sh` is
+optional in the schema but absent from the built-in machine definitions.
 
 ## CI — rig lints every definition on every PR
 
