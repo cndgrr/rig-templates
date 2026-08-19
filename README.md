@@ -9,11 +9,12 @@ the two move at different cadences — adding an agent tenant is a data PR
 here, never a mechanism edit there (rig#109 is the evidence: adding kimi,
 pure data, meant editing six files in a mechanism repo).
 
-This repo deliberately has **no release ceremony**: it is pinned from the
-consumer side. rig's tree records the ref it converges by default
+This registry publishes named releases with a changelog and real-metal drill
+record. rig still pins the immutable commit a release tag names
 (`RIG_TEMPLATES_PIN` in `commands/lib/templates.sh`, the `BOX_RELEASE`
-discipline), bumped by ordinary reviewed rig PR — so a newer rig matches
-newer templates by default, and a mint overrides per run:
+discipline), bumped by ordinary reviewed rig PR — so the release makes that
+commit legible without making the tag the trust boundary. A mint overrides per
+run:
 
     RIG_TEMPLATES_DIR=<dir>    a local folder, no fetch (tests; try-before-push)
     RIG_TEMPLATES_REF=<ref>    any ref here (or in RIG_TEMPLATES_REPO), fetched
