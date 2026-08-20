@@ -66,8 +66,8 @@ if [ "$YES" -ne 1 ]; then
   exit 0
 fi
 
-if [ -n "${RIG_TEMPLATES_REF:-}" ] || [ -n "${RIG_TEMPLATES_REPO:-}" ]; then
-  die "RIG_TEMPLATES_REF and RIG_TEMPLATES_REPO must be unset; the converge leg sets only RIG_TEMPLATES_DIR=/registry"
+if [ -n "${RIG_TEMPLATES_DIR:-}" ] || [ -n "${RIG_TEMPLATES_REF:-}" ] || [ -n "${RIG_TEMPLATES_REPO:-}" ]; then
+  die "RIG_TEMPLATES_DIR, RIG_TEMPLATES_REF, and RIG_TEMPLATES_REPO must be unset; the converge leg sets only RIG_TEMPLATES_DIR=/registry"
 fi
 
 shopt -s nullglob
@@ -82,6 +82,16 @@ for definition in "${definitions[@]}"; do roles+=("$(basename "$definition")"); 
 if [ ! -f "$ROOT/$ROLE/template.env" ]; then
   die "unknown --role $ROLE; registry defines: ${roles[*]}"
 fi
+case "$ROLE" in
+  *-box) ;;
+  *) die "--role $ROLE is a credential-bearing machine definition; this drill converges tenant *-box definitions only" ;;
+esac
+
+user="$(sed -n 's/^USER="\([^"]*\)"$/\1/p' "$ROOT/$ROLE/template.env")"
+agent="$(sed -n 's/^AGENT="\([^"]*\)"$/\1/p' "$ROOT/$ROLE/template.env")"; agent="${agent:-yes}"
+harden="$(sed -n 's/^HARDEN_SSHD="\([^"]*\)"$/\1/p' "$ROOT/$ROLE/template.env")"; harden="${harden:-no}"
+cli="$(sed -n 's/^CLI_NAME="\([^"]*\)"$/\1/p' "$ROOT/$ROLE/template.env")"
+context="$(sed -n 's/^CONTEXT_PATH="\([^"]*\)"$/\1/p' "$ROOT/$ROLE/template.env")"
 
 TMP="$(mktemp -d)"
 CONTAINER="rig-templates-drill-${RUN_ID//[^A-Za-z0-9_.-]/-}-$$"
@@ -176,11 +186,6 @@ else
   fi
 
   if [ -z "$container_reason" ]; then
-    user="$(sed -n 's/^USER="\([^"]*\)"$/\1/p' "$ROOT/$ROLE/template.env")"
-    agent="$(sed -n 's/^AGENT="\([^"]*\)"$/\1/p' "$ROOT/$ROLE/template.env")"; agent="${agent:-yes}"
-    harden="$(sed -n 's/^HARDEN_SSHD="\([^"]*\)"$/\1/p' "$ROOT/$ROLE/template.env")"; harden="${harden:-no}"
-    cli="$(sed -n 's/^CLI_NAME="\([^"]*\)"$/\1/p' "$ROOT/$ROLE/template.env")"
-    context="$(sed -n 's/^CONTEXT_PATH="\([^"]*\)"$/\1/p' "$ROOT/$ROLE/template.env")"
     docker exec "$CONTAINER" useradd -m "$user" >"$TMP/seed.log" 2>&1 || true
     set +e
     docker exec -e RIG_INSTALL_SOURCE=/rig-source "$CONTAINER" bash /rig-source/install.sh >"$TMP/rig-install.log" 2>&1
@@ -236,7 +241,7 @@ else
       # This is intentionally single-quoted: the variables expand inside the
       # container's bash, not in this host-side script.
       # shellcheck disable=SC2016
-      capture='user=$1; context=$2; { dpkg-query -W -f="${Package} ${Version}\n" | sort; sshd -T 2>/dev/null | sort || true; getent passwd "$user"; id "$user"; for path in /etc/ssh/sshd_config.d/* /home/"$user"/.bashrc /home/"$user"/.profile /home/"$user"/.zshrc /etc/rig/role /etc/rig/manifest /home/"$user"/"$context"; do [ -f "$path" ] && sha256sum "$path"; done | sort; }'
+      capture='user=$1; context=$2; { dpkg-query -W -f="${Package} ${Version}\n" | sort; sshd -T 2>/dev/null | sort || true; getent passwd "$user"; id "$user"; systemctl is-enabled cron 2>/dev/null || true; systemctl is-active cron 2>/dev/null || true; crontab -u "$user" -l 2>/dev/null || true; { find /etc/ssh/sshd_config.d -maxdepth 1 -type f 2>/dev/null; find /home/"$user" -maxdepth 1 -type f \( -name ".*rc" -o -name ".profile" -o -name ".zshenv" -o -name ".tmux.conf" \) 2>/dev/null; printf "%s\n" /etc/rig/role /etc/rig/manifest; [ -n "$context" ] && printf "/home/%s/%s\n" "$user" "$context"; } | sort -u | while read -r path; do [ -f "$path" ] && sha256sum "$path"; done; }'
       docker exec "$CONTAINER" bash -c "$capture" snapshot "$user" "$context" >"$TMP/snapshot-1"
       start="$(now)"
       set +e
@@ -255,8 +260,8 @@ else
   fi
 fi
 
-disclosure="This default run did not exercise agent-tenant install.sh (the registry's highest-trust root surface), creds.md, the rendered agent-context file, NEEDS_NODE, or the duty-engine cron converge. Machine roles requiring a tailnet credential are excluded by construction."
-if [ "$ROLE" != staging-box ]; then
+disclosure="This agentless run did not exercise agent-tenant install.sh (the registry's highest-trust root surface), creds.md, the rendered agent-context file, NEEDS_NODE, or the duty-engine cron converge. Machine roles requiring a tailnet credential are excluded by construction."
+if [ "$agent" = yes ]; then
   disclosure="This optional $ROLE run exercised its install.sh, creds.md, rendered agent-context file, and NEEDS_NODE behavior. It did not exercise the other agent tenants, duty-engine cron converge, or credential-bearing machine roles."
 fi
 
