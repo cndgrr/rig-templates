@@ -32,8 +32,9 @@ A release is a `release`-labelled PR that changes `VERSION` from `X.Y.Z-dev`
 to bare `X.Y.Z` and assembles every fragment into the stamped changelog
 section. Merging that PR publishes the release; the workflow then re-arms
 `main` at the next development version. A release drill means every definition
-in the registry was converged at least once, unattended, on real metal, at the
-released ref, with the evidence recorded in `drills/X.Y.Z.md` in this repo.
+is linted, one definition is converged in a throwaway container, and a second
+converge is compared mechanically, with the evidence and explicit limits
+recorded in `drills/X.Y.Z.md` in this repo.
 
 Rig still pins the commit a release tag names rather than trusting a mutable
 tag. A merged PR here reaches mints only through a reviewed pin bump in rig,

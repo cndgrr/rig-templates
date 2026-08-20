@@ -9,8 +9,8 @@ the two move at different cadences — adding an agent tenant is a data PR
 here, never a mechanism edit there (rig#109 is the evidence: adding kimi,
 pure data, meant editing six files in a mechanism repo).
 
-This registry publishes named releases with a changelog and real-metal drill
-record. rig still pins the immutable commit a release tag names
+This registry publishes named releases with a changelog and a repo-local smoke
+drill record. rig still pins the immutable commit a release tag names
 (`RIG_TEMPLATES_PIN` in `commands/lib/templates.sh`, the `BOX_RELEASE`
 discipline), bumped by ordinary reviewed rig PR — so the release makes that
 commit legible without making the tag the trust boundary. A mint overrides per
