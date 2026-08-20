@@ -26,6 +26,11 @@ lint leg still runs, the container legs are recorded as `SKIPPED` with their
 reason, and the complete record exits zero. Add `--strict` when every leg must
 be `PASS` for the caller to succeed.
 
+A container whose init never becomes ready is likewise unavailable and is
+recorded as `SKIPPED`. Once the container is ready, a rig installation failure
+or a mounted-checkout resolution mismatch is an instrument finding and is
+recorded as `FAIL`, while leg 3 is `SKIPPED` because no first converge ran.
+
 An agent tenant can be exercised explicitly:
 
 ```sh

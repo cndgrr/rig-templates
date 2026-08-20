@@ -25,8 +25,8 @@ idempotence mechanically, and emit the drill record.
   --image <image>        container image (default: debian:13)
   --run-id <id>          record join label (default: UTC date plus suffix)
   --strict               exit non-zero unless every leg passes
-  --yes                   create and destroy the container without prompting
-  -h, --help              show this help
+  --yes                  create and destroy the container without prompting
+  -h, --help             show this help
 
 The matching DRILL_ROLE, DRILL_RECORD, DRILL_RIG_REF, DRILL_IMAGE, and
 DRILL_RUN_ID environment variables provide the same inputs. No credential is
@@ -141,6 +141,7 @@ else
 fi
 
 container_reason=""
+container_result=SKIPPED
 if ! command -v docker >/dev/null 2>&1; then
   container_reason="docker is unavailable"
 elif ! docker info >/dev/null 2>&1; then
@@ -193,6 +194,7 @@ else
     set -e
     if [ "$install_rc" -ne 0 ]; then
       container_reason="rig installation failed"
+      container_result=FAIL
     fi
   fi
 
@@ -206,11 +208,14 @@ else
     ' >"$TMP/source.log" 2>&1
     source_rc=$?
     set -e
-    [ "$source_rc" -eq 0 ] || container_reason="rig did not resolve the mounted checkout at /registry"
+    if [ "$source_rc" -ne 0 ]; then
+      container_reason="rig did not resolve the mounted checkout at /registry"
+      container_result=FAIL
+    fi
   fi
 
   if [ -n "$container_reason" ]; then
-    record_leg SKIPPED "$(( $(now) - start ))s" "$container_reason"
+    record_leg "$container_result" "$(( $(now) - start ))s" "$container_reason"
     record_leg SKIPPED 0s "$container_reason"
   else
     set +e
@@ -241,27 +246,40 @@ else
       # This is intentionally single-quoted: the variables expand inside the
       # container's bash, not in this host-side script.
       # shellcheck disable=SC2016
-      capture='user=$1; context=$2; { dpkg-query -W -f="${Package} ${Version}\n" | sort; sshd -T 2>/dev/null | sort || true; getent passwd "$user"; id "$user"; systemctl is-enabled cron 2>/dev/null || true; systemctl is-active cron 2>/dev/null || true; crontab -u "$user" -l 2>/dev/null || true; { find /etc/ssh/sshd_config.d -maxdepth 1 -type f 2>/dev/null; find /home/"$user" -maxdepth 1 -type f \( -name ".*rc" -o -name ".profile" -o -name ".zshenv" -o -name ".tmux.conf" \) 2>/dev/null; printf "%s\n" /etc/rig/role /etc/rig/manifest; [ -n "$context" ] && printf "/home/%s/%s\n" "$user" "$context"; } | sort -u | while read -r path; do [ -f "$path" ] && sha256sum "$path"; done; }'
-      docker exec "$CONTAINER" bash -c "$capture" snapshot "$user" "$context" >"$TMP/snapshot-1"
+      capture='user=$1; context=$2; { dpkg-query -W -f="${Package} ${Version}\n" | sort; sshd -T 2>/dev/null | sort || true; getent passwd "$user"; id "$user"; systemctl is-enabled cron 2>/dev/null || true; systemctl is-active cron 2>/dev/null || true; crontab -u "$user" -l 2>/dev/null || true; { find /etc/ssh/sshd_config.d -maxdepth 1 -type f 2>/dev/null; find /home/"$user" -maxdepth 1 -type f \( -name ".*rc" -o -name ".profile" -o -name ".zshenv" -o -name ".tmux.conf" \) 2>/dev/null; printf "%s\n" /etc/rig/role /etc/rig/manifest; [ -n "$context" ] && printf "/home/%s/%s\n" "$user" "$context"; } | sort -u | while read -r path; do if [ -f "$path" ]; then sha256sum "$path"; fi; done; }'
       start="$(now)"
       set +e
-      docker exec -e RIG_TEMPLATES_DIR=/registry "$CONTAINER" rig bootstrap "$ROLE" >"$TMP/converge-2.log" 2>&1
-      second_rc=$?
-      docker exec "$CONTAINER" bash -c "$capture" snapshot "$user" "$context" >"$TMP/snapshot-2"
-      diff -u "$TMP/snapshot-1" "$TMP/snapshot-2" >"$TMP/snapshot.diff"
-      diff_rc=$?
+      docker exec "$CONTAINER" bash -c "$capture" snapshot "$user" "$context" >"$TMP/snapshot-1" 2>"$TMP/snapshot-1.log"
+      snapshot_1_rc=$?
+      second_rc=1
+      snapshot_2_rc=1
+      diff_rc=1
+      if [ "$snapshot_1_rc" -eq 0 ]; then
+        docker exec -e RIG_TEMPLATES_DIR=/registry "$CONTAINER" rig bootstrap "$ROLE" >"$TMP/converge-2.log" 2>&1
+        second_rc=$?
+        docker exec "$CONTAINER" bash -c "$capture" snapshot "$user" "$context" >"$TMP/snapshot-2" 2>"$TMP/snapshot-2.log"
+        snapshot_2_rc=$?
+        if [ "$snapshot_2_rc" -eq 0 ]; then
+          diff -u "$TMP/snapshot-1" "$TMP/snapshot-2" >"$TMP/snapshot.diff"
+          diff_rc=$?
+        fi
+      fi
       set -e
-      if [ "$second_rc" -eq 0 ] && [ "$diff_rc" -eq 0 ]; then
+      if [ "$snapshot_1_rc" -eq 0 ] && [ "$second_rc" -eq 0 ] && [ "$snapshot_2_rc" -eq 0 ] && [ "$diff_rc" -eq 0 ]; then
         record_leg PASS "$(( $(now) - start ))s" "second converge produced a byte-identical mechanical snapshot"
       else
-        record_leg FAIL "$(( $(now) - start ))s" "second converge failed or snapshot diff was non-empty"
+        record_leg FAIL "$(( $(now) - start ))s" "snapshot capture, second converge, or snapshot comparison failed"
       fi
     fi
   fi
 fi
 
+definition_converged="$ROLE"
 disclosure="This agentless run did not exercise agent-tenant install.sh (the registry's highest-trust root surface), creds.md, the rendered agent-context file, NEEDS_NODE, or the duty-engine cron converge. Machine roles requiring a tailnet credential are excluded by construction."
-if [ "$agent" = yes ]; then
+if [ "${results[1]}" != PASS ]; then
+  definition_converged="none (leg 2 ${results[1]})"
+  disclosure="No definition was converged, so this run exercised no tenant install.sh, creds.md, rendered agent-context file, NEEDS_NODE behavior, or duty-engine cron converge. Machine roles requiring a tailnet credential are excluded by construction."
+elif [ "$agent" = yes ]; then
   disclosure="This optional $ROLE run exercised its install.sh, creds.md, rendered agent-context file, and NEEDS_NODE behavior. It did not exercise the other agent tenants, duty-engine cron converge, or credential-bearing machine roles."
 fi
 
@@ -275,7 +293,7 @@ emit_record() {
     printf -- '- Registry: `%s` (%s tree)\n' "$REPO_SHA" "$TREE_STATE"
     printf -- '- Rig: `%s` resolved to `%s`\n' "$RIG_REF" "$RIG_SHA"
     printf -- '- Container image: `%s` (`%s`)\n' "$IMAGE" "$IMAGE_DIGEST"
-    printf -- '- Definition converged: `%s`\n\n' "$ROLE"
+    printf -- '- Definition converged: `%s`\n\n' "$definition_converged"
     printf '| Leg | Result | Duration | Detail |\n| --- | --- | --- | --- |\n'
     for index in 0 1 2; do
       printf '| %s | %s | %s | %s |\n' "$((index + 1))" "${results[$index]}" "${durations[$index]}" "${details[$index]//|/\\|}"

@@ -19,5 +19,5 @@ When `VERSION` ends in `-dev`, the script refuses to derive a path and names
 strips the suffix and claims to evidence a release tree.
 
 This meaning replaces the real-metal, every-definition ruling on 2026-08-20.
-The release gate still reads a non-empty version file in this repository and
+The release gate still reads a version-named file in this repository and
 nothing else.
