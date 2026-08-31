@@ -59,6 +59,36 @@ Machine-role directories are traits-only: their `template.env` allowlist is
 `ROOT_DOOR`, `HOST`, and `JOIN`. They carry no `creds.md`; an `install.sh` is
 optional in the schema but absent from the built-in machine definitions.
 
+### The agent tenants' shared `APT_EXTRAS` base
+
+Every agent tenant declares `APT_EXTRAS="cron gh jq"`, plus whatever its
+vendor needs on top — `claude-box` carries `cron gh jq zsh`. Those three are
+the hard prerequisites of crew's box-side installer, which every agent tenant
+exists to run: it exits on a missing `gh` or `jq`, and a missing `crontab` is
+worse, because the install completes, *reports success*, and hands the
+operator an apt command for a box that will never tick.
+
+`test/agent-apt-extras.sh` holds that base, and CI runs it on every PR beside
+`rig template-lint` — never inside it, because rig owns its own schema and
+must not learn one registry's conventions. Dropping a base package from any
+tenant reds CI; adding a vendor package to one does not. The tenant set is
+**derived** from `AGENT`, not hand-listed, so `staging-box`'s `AGENT="no"`
+takes it out and a fifth vendor tenant arrives already bound to the base.
+
+The base is this registry stating what its tenants need, not the only thing
+that supplies it: rig's agent-tenant toolbelt installs `gh`, `jq` and `cron`
+itself and asserts `cron.service` is enabled and active (rig#162). The
+registry declaring its own requirement is what survives that toolbelt
+changing.
+
+The same check holds the boundary the withdrawn `crew-box` rests on: a tenant
+gains crew's **packages** and never crew's **engine**. `~/duty` is
+version-managed by crew, whose integrity verdict is built on crew being that
+tree's sole writer, so no definition here installs it and no `crew-*-box`
+role exists. `drill/drill.sh --crew-member` is the end-to-end evidence —
+crew's installer run credential-free on a converged tenant, with cron
+**armed** rather than merely installed.
+
 ## CI — rig lints every definition on every PR
 
 rig defines what a valid template is (`rig template-lint`, shipped beside

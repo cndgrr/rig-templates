@@ -4,12 +4,26 @@ on:
     branches: [main]
   pull_request:
 jobs:
+  # The registry's own contracts, run BESIDE rig template-lint and never
+  # inside it: rig owns its schema, and it must not learn one registry's
+  # conventions. Its own job so a base divergence is legible without reading
+  # a converge log.
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: the agent tenants' shared APT_EXTRAS base
+        run: bash test/agent-apt-extras.test.sh
   drill:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: registry smoke drill
         run: bash drill/drill.sh --record - --yes
+      # --strict because this leg IS the evidence: a SKIPPED crew leg on a
+      # runner that has docker is as much a non-answer as a FAIL.
+      - name: crew-member drill — a converged tenant survives crew hire
+        run: bash drill/drill.sh --role codex-box --crew-member --record - --yes --strict
   lint:
     runs-on: ubuntu-latest
     steps:
