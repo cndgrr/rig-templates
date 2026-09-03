@@ -15,10 +15,9 @@ genuinely rig-templates'.
 1. **Fork and branch.** Contributors work from forks; upstream branches are
    for maintainers. Title the PR conventionally (`feat:`, `fix:`, `docs:`).
 2. **The review panel** (`.github/labels.conf`'s `panel=` line):
-   `claude-bot-andresmgsl`, `codex-bot-andresmgsl`, `grok-bot-andresmgsl`,
-   `kimi-bot-andresmgsl` — the required verdicts for a PR are the panel
-   minus its author. The maintainer (`danmt`) takes the last word and
-   merges.
+   `claude-bot-andresmgsl`, `codex-bot-andresmgsl`,
+   `kimi-bot-andresmgsl` — the required verdicts for a PR are the panel minus
+   its author. The maintainer (`danmt`) takes the last word and merges.
 3. **Checks must be green**: `rig template-lint` runs on every definition on
    every PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)). rig owns
    the schema — a failing lint is fixed here, never worked around.
