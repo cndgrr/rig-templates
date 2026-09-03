@@ -14,6 +14,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: the agent tenants' shared APT_EXTRAS base
         run: bash test/agent-apt-extras.test.sh
+      - name: labels.conf sets documented in CONTRIBUTING.md
+        run: bash test/labels-conf-documented.test.sh
   drill:
     runs-on: ubuntu-latest
     steps:
