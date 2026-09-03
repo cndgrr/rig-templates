@@ -6,8 +6,12 @@
 # MECHANISM as root; the install itself runs AS the tenant user, never root:
 # grok's lesson — a root-owned install under a 0700 home is a CLI that
 # exists and cannot run.
+#
+# As of 2026-09-03 the vendor URL serves a deprecation shim. Its documented
+# KIMI_CLI_FORCE_OLD automation escape pins the legacy kimi-cli; migrating to
+# Kimi Code is a separate decision this installer does not make.
 set -euo pipefail
 
 if [ ! -e "$TENANT_HOME/.local/bin/kimi" ]; then
-  runuser -l "$TENANT_USER" -c 'curl -LsSf https://code.kimi.com/install.sh | bash'
+  runuser -l "$TENANT_USER" -c 'curl -LsSf https://code.kimi.com/install.sh | KIMI_CLI_FORCE_OLD=1 bash'
 fi
