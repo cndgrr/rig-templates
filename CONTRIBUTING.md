@@ -18,6 +18,14 @@ genuinely rig-templates'.
    `claude-bot-andresmgsl`, `codex-bot-andresmgsl`,
    `kimi-bot-andresmgsl` — the required verdicts for a PR are the panel minus
    its author. The maintainer (`danmt`) takes the last word and merges.
+   Requesting that panel is the PR author's own act here: no automation on
+   this board requests panel members, so a ready head with nobody asked is
+   waiting on its author rather than on a machine. The labels caller
+   ([`.github/workflows/labels.yml`](.github/workflows/labels.yml)) writes
+   the PR's `state:*` labels and may request the maintainer at the handoff —
+   that is the only review request it makes. The request's own rules (a green
+   check at the head, re-requesting by head, the roster minus the author) are
+   [`.ceremony/BUILDER.md`](.ceremony/BUILDER.md)'s and are not repeated here.
 3. **Checks must be green**: `rig template-lint` runs on every definition on
    every PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)). rig owns
    the schema — a failing lint is fixed here, never worked around.
